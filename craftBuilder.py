@@ -27,6 +27,7 @@ DB_DIR = os.path.dirname(os.path.realpath(__file__)) + '/' # Change if database 
 DB = 'cache.' + str(HOST) + '.' + str(PORT) + '.db'
 db_name = DB_DIR + DB
 
+
 #################################################################################################
 # SOME DEFAULTS FOR DRAWING CAN BE CHANGED IF NEEDED
 OVERLAYWIDTH = 3
@@ -104,12 +105,9 @@ class Client(object):
 
             if (response.code == 200):
                 auth_token = response.read()
-                # print 'Authentication token: ', auth_token
                 self.conn.send('A,' + USERNAME + ',' + auth_token + '\n')
-                # print 'Successfully authenticated'
                 return 1
             else:
-                # print 'Not authenticated'
                 return 0
         except urllib2.HTTPError:
             print 'HTTP Error. Not authenticated'
@@ -122,7 +120,6 @@ class Client(object):
     def read_signs(self, x1, y1, z1, x2, y2, z2, db_name):
         qs = "select * from sign where x between %s and %s and y between %s and %s and z between %s and %s;"\
                 %(str(x1),str(x2), str(y1), str(y2), str(z1), str(z2))
-
         con = None
         try:
             con = lite.connect(db_name)
@@ -132,7 +129,6 @@ class Client(object):
             sys.stdout.flush()
         except RuntimeError:
             pass
-
         sign_list = list()
 
         for y in range(0,int(y2)-int(y1)+1):
@@ -150,11 +146,8 @@ class Client(object):
         return sign_list
 
     def read_db(self, x1, y1, z1, x2, y2, z2, db_name):
-
-
         qs = "select * from block where x between %s and %s and y between %s and %s and z between %s and %s;"\
                 %(str(x1),str(x2), str(y1), str(y2), str(z1), str(z2))
-
         con = None
         try:
             con = lite.connect(db_name)
@@ -163,21 +156,16 @@ class Client(object):
             data = cur.fetchall()
         except RuntimeError:
             pass
-
         copy_list = list()
-
         for y in range(0,int(y2)-int(y1)+1):
             copy_list.append(dict())
 
         for row in data:
-
-
             if row[5] < 0 or row[5] == 0:
                 pass
             else:
                 if (row[2]-int(x1),row[4]-int(z1)) not in copy_list[row[3]-int(y1)]:
                     copy_list[row[3]-int(y1)][row[2]-int(x1),row[4]-int(z1)] = row[5]
-
         return copy_list
 
 
@@ -283,9 +271,12 @@ class App(Frame):
                     self.canvas.itemconfig(self.rect[self.rows - row - 1,col], width = DEFAULTWIDTH)
 
     def redraw_level(self):
+        start = time.clock()
+        count = 0
         for col in range(self.cols):
             for row in range(self.rows):
                 if (self.rows - row - 1,col) in self.levels[self.curr_level]:
+                    count = count + 1
                     val = self.levels[self.curr_level][self.rows - row - 1,col]
 
                     self.canvas.itemconfig(self.rect[self.rows - row - 1,col],fill=COLORS[val],width = DEFAULTWIDTH)
@@ -296,6 +287,9 @@ class App(Frame):
 
         self.parent.title("Craft Builder: Dimensions: " + str(self.rows) + 'x' + str(len(self.levels)) +'x' + str(self.cols))
         self.redraw_overlay()
+        print 'Time for redraw: ', time.clock() - start
+        print 'Number of blocks: ', count
+        sys.stdout.flush()
 
     def updateDimensions(self,r,c,y=1):
         self.rows = r
