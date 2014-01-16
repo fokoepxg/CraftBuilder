@@ -1,1 +1,17 @@
-Hello Testing
+Craft Builder for Michael Fogleman's Craft
+
+Uses python default libraries including Tkinter so should run on most systems with python. If there are any issues let me know.
+
+To be able to add geometric shapes to the canvas you should have builder.py(from https://github.com/fogleman/Craft) in the same directory as this file, as this calls functions directly from builder.py. 
+If the file is not present in the directory, the option to add geometric shapes will not be available
+
+Note: This is a top down perspective. Origin is bottom-left of grid with x increasing upward on the grid and z increasing rightward on the grid. Increasing y is by achieved by adding levels to the grid. 
+
+To paste items on the world maps of connected severs, ensure you are facing the direction of x increasing in front of you and z increasing to the right of you to select the correct origin on the map (x,y,z) to add your model
+
+
+To connect to server and access server world:
+1. craftBuilder.py - Fill in details HOSTNAME, PORT, USERNAME, TOKEN(if None will read from auth.db) 
+2. craftBuilder.py - Fill in DB_DIR as your path to where the client databases are store. 'e.g /users/xxxx/Craft/'
+3. craftBuilder.py - NUMPERSEC - number of block messages to be sent per second. Increasing this will probably overload the server if you have a large build
+

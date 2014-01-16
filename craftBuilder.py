@@ -20,8 +20,8 @@ HOST = 'XXXXXXXX'
 PORT = 0000
 USERNAME = 'XXXX'
 TOKEN = None # can be left blank, if blank it will access from auth.db
-DB_DIR = os.path.dirname(os.path.realpath(__file__)) + '/' # Change if database is not in the same directory as this file
-NUMPERSEC = 300 # for sending build messages to server, to ensure server is not overloaded
+DB_DIR = os.path.dirname(os.path.realpath(__file__)) + '/' # Change if database is not in the same directory as this file.
+                                                                                            # Backslah might need to be changed in windows (not sure)
 #################################################################################################
 
 DB = 'cache.' + str(HOST) + '.' + str(PORT) + '.db'
@@ -31,6 +31,7 @@ db_name = DB_DIR + DB
 # SOME DEFAULTS FOR DRAWING CAN BE CHANGED IF NEEDED
 OVERLAYWIDTH = 3
 DEFAULTWIDTH = 1
+NUMPERSEC = 300 # for sending build messages to server, to ensure server is not overloaded
 #################################################################################################
 
 class HelpWindow(object):
