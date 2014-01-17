@@ -28,6 +28,8 @@ DB = 'cache.' + str(HOST) + '.' + str(PORT) + '.db'
 db_name = DB_DIR + DB
 
 
+sys.path.insert(0, DB_DIR)
+builder = ''
 #################################################################################################
 # SOME DEFAULTS FOR DRAWING CAN BE CHANGED IF NEEDED
 OVERLAYWIDTH = 3
@@ -184,7 +186,7 @@ class App(Frame):
         Frame.__init__(self, parent)
         self.levels = list()
         self.signs = list()
-        self.items = [i for i in range(1,64)]
+        self.items = [i for i in range(0,64)]
         self.items.remove(16)
         self.current_item = 0
         self.parent = parent
@@ -193,6 +195,7 @@ class App(Frame):
         self.client = Client()
         self.initDimensions()
         self.initUI()
+        self.event = None
         self.reset_canvas()
 
     def connect(self):
@@ -246,50 +249,61 @@ class App(Frame):
 
     def reset_canvas(self):
         self.canvas.delete(ALL)
-        count = 0
-        for col in range(self.cols):
-            for row in range(self.rows):
-                x1 = col * self.cellwidth
-                y1 = row * self.cellheight
-                x2 = x1 + self.cellwidth
-                y2 = y1 + self.cellheight
-                self.rect[self.rows - row - 1,col] = self.canvas.create_rectangle(x1,y1,x2,y2, fill="white", tags="rect", outline = 'black', width = DEFAULTWIDTH)
-                self.rect_text[self.rows - row - 1,col] = self.canvas.create_text((x1+x2)/2,(y1+y2)/2, text = '', font=('verdana', 7))
         self.parent.title("Craft Builder: Dimensions: " + str(self.rows) + 'x' + str(len(self.levels)) +'x' + str(self.cols))
 
     def redraw_overlay(self):
+        c = set(self.levels[self.overlay_level].keys())
         if self.overlayToggle == 1:
-            for col in range(self.cols):
-                for row in range(self.rows):
-                    if (self.rows - row - 1,col) in self.levels[self.overlay_level]:
-                        self.canvas.itemconfig(self.rect[self.rows - row - 1,col], width = OVERLAYWIDTH)
-                    else:
-                        self.canvas.itemconfig(self.rect[self.rows - row - 1,col], width = DEFAULTWIDTH)
-        else:
-            for col in range(self.cols):
-                for row in range(self.rows):
-                    self.canvas.itemconfig(self.rect[self.rows - row - 1,col], width = DEFAULTWIDTH)
+            for key in c:
+                x1 = key[1] * self.cellwidth
+                y1 = (self.rows - key[0] - 1) * self.cellheight
+                x2 = x1 + self.cellwidth
+                y2 = y1 + self.cellheight
+
+                if (key[0], key[1]) in self.rect:
+                    self.canvas.itemconfig(self.rect[key[0],key[1]], width = OVERLAYWIDTH)
+                else:
+                    self.rect[key[0],key[1]] = self.canvas.create_rectangle(x1,y1,x2,y2, fill='white', outline = 'black', width = OVERLAYWIDTH, tag = 'block')
+                    self.rect_text[key[0],key[1]] = self.canvas.create_text((x1+x2)/2,(y1+y2)/2, text = '', font=('verdana', 7), tag = 'blocktext')
 
     def redraw_level(self):
-        start = time.clock()
-        count = 0
-        for col in range(self.cols):
-            for row in range(self.rows):
-                if (self.rows - row - 1,col) in self.levels[self.curr_level]:
-                    count = count + 1
-                    val = self.levels[self.curr_level][self.rows - row - 1,col]
+        # self.canvas.delete(ALL)
 
-                    self.canvas.itemconfig(self.rect[self.rows - row - 1,col],fill=COLORS[val],width = DEFAULTWIDTH)
-                    self.canvas.itemconfig(self.rect_text[self.rows - row - 1,col], text = self.levels[self.curr_level][self.rows - row - 1,col])
-                else:
-                    self.canvas.itemconfig(self.rect[self.rows - row - 1,col],fill="white",width = DEFAULTWIDTH)
-                    self.canvas.itemconfig(self.rect_text[self.rows - row - 1,col], text = '')
+        # self.rect=dict()
+        # self.rect_text = dict()
+        start = time.clock()
+
+        b = set(self.levels[self.curr_level].keys())
+
+        for key in b:
+            val = self.levels[self.curr_level][key]
+            if (key[0], key[1]) in self.rect:
+                self.canvas.itemconfig(self.rect[key[0],key[1]], fill = COLORS[val], outline = 'black', width = DEFAULTWIDTH)
+                self.canvas.itemconfig(self.rect_text[key[0],key[1]], text = val)
+            else:
+                x1 = key[1] * self.cellwidth
+                y1 = (self.rows - key[0] - 1) * self.cellheight
+                x2 = x1 + self.cellwidth
+                y2 = y1 + self.cellheight
+                self.rect[key[0],key[1]] = self.canvas.create_rectangle(x1,y1,x2,y2, fill = COLORS[val], outline = 'black', width = DEFAULTWIDTH, tag = 'block')
+                self.rect_text[key[0],key[1]] = self.canvas.create_text((x1+x2)/2,(y1+y2)/2, text = val, font=('verdana', 7), tag = 'blocktext')
+
+        items_to_remove = list()
+        for key in self.rect:
+            if key not in self.levels[self.curr_level]:
+                self.canvas.delete(self.rect[key[0],key[1]])
+                self.canvas.delete(self.rect_text[key[0],key[1]])
+                items_to_remove.append(key)
+        for i in items_to_remove:
+            self.rect.pop(i)
+            self.rect_text.pop(i)
+
 
         self.parent.title("Craft Builder: Dimensions: " + str(self.rows) + 'x' + str(len(self.levels)) +'x' + str(self.cols))
         self.redraw_overlay()
-        print 'Time for redraw: ', time.clock() - start
-        print 'Number of blocks: ', count
-        sys.stdout.flush()
+
+
+
 
     def updateDimensions(self,r,c,y=1):
         self.rows = r
@@ -313,20 +327,20 @@ class App(Frame):
 
     def altMenu(self, event):
         # print "Keycode:", event.keycode, "State:", event.keysym, event.type
-
+        self.event = event
         if event.type == '2':
             self.altAction = True
             self.clear_button.config(text = 'Multi Clear', bg = 'white')
             self.delete_button.config(text = 'Multi Delete', bg='white')
             self.insert_button.config(text = 'Multi Insert', bg='white')
-            self.new_level_button.config(text = 'Multi New', bg = 'white')
+            self.copy_level_button.config(text = 'Multi Copy', bg = 'white')
         elif event.type == '3':
             defaultbg = self.parent.cget('bg')
             self.altAction = False
             self.clear_button.config(text = 'Clear Level', bg = defaultbg)
             self.delete_button.config(text = 'Delete', bg = defaultbg)
             self.insert_button.config(text = 'Insert', bg = defaultbg)
-            self.new_level_button.config(text = 'New Level', bg = defaultbg)
+            self.copy_level_button.config(text = 'Copy overlay level', bg = defaultbg)
         sys.stdout.flush()
 
     def initUI(self):
@@ -398,8 +412,8 @@ class App(Frame):
         lbl_b = Label(self, text="Overlay Level", font=("Verdana", 10))
         lbl_b.grid(row = 6, column = 2)
 
-        copy_level_button = Button(self, text="Copy overlay level", command = self.onCopy, width = 12)
-        copy_level_button.grid(row=7, column=2, columnspan=1)
+        self.copy_level_button = Button(self, text="Copy overlay level", command = self.onCopy, width = 12)
+        self.copy_level_button.grid(row=7, column=2, columnspan=1)
 
         load_world_button = Button(self, text="Load from world", command = self.onLoadFromWorld, width = 12)
         load_world_button.grid(row=8, column=2)
@@ -445,6 +459,7 @@ class App(Frame):
         add_geo_button.grid(row=8, column=5)
 
         try:
+            global builder
             import builder
         except ImportError:
             add_geo_button.config(state = 'disabled')
@@ -467,34 +482,148 @@ class App(Frame):
                 self.currLevelCombo.set(self.curr_level)
                 self.redraw_level()
 
-    def onClear(self):
-        if tkMessageBox.askquestion('Clear', "Clear Level: " + str(self.curr_level)) == 'yes':
-            self.levels[self.curr_level] = dict()
-            self.signs[self.curr_level] = dict()
-            self.redraw_level()
+    def onInsertLevel(self):
+        if self.altAction == 1:
+            self.w=popupWindow(self,title = "Enter num_levels to insert and level below which to insert\n" +
+                                                                 "seperated by a space.")
+            self.wait_window(self.w.top)
+            self.altAction = 0
+            data = self.w.value.split(' ')
+            try:
+                if len(data) == 2:
+                    for i in range(int(data[0])):
+                        self.insert_new_level(int(data[1]))
+                    self.redraw_level()
+                else:
+                    print 'Not enough arguments'
+            except ValueError:
+                print 'Error in values'
+
+
         else:
-            pass
+            self.insert_new_level(self.curr_level)
+            self.currLevelCombo.config(values = range(len(self.levels)))
+            self.overlayLevelCombo.config(values = range(len(self.levels)))
+            self.redraw_level()
+
+    def onCopy(self):
+        if self.altAction == 1:
+            self.w=popupWindow(self,title = "Enter the arguments start_level end_level num_times\n" +
+                                                                 "and level above which to copy, all seperated by spaces.")
+            self.wait_window(self.w.top)
+            self.altAction = 0
+
+            data = self.w.value.split(' ')
+            try:
+                if len(data) == 4:
+                    st,sto = sorted((data[0],data[1]))
+                    st = int(st)
+                    sto = int(sto)
+                    n = data[2]
+                    l = int(data[3]) + 1
+                    for i in range(int(n)):
+                        for j in range(st, sto +1):
+                            for col in range(self.cols):
+                                for row in range(self.rows):
+                                    if (row,col) in self.levels[j]:
+                                        if  l+j-st < len(self.levels) :
+                                            self.levels[l+j-st][row,col] = self.levels[j][row,col]
+                        l = l +(sto-st+1)
+                else:
+                    print 'Not enough arguments'
+            except ValueError:
+                print 'Error in values'
+
+        else:
+            for col in range(self.cols):
+                for row in range(self.rows):
+                    if (row,col) in self.levels[self.overlay_level]:
+                       self.levels[self.curr_level][row,col] = self.levels[self.overlay_level][row,col]
+        sys.stdout.flush()
+        self.redraw_level()
+
+
+
+    def onClear(self):
+        if self.altAction == 1:
+            self.w=popupWindow(self,title = "Enter the arguments start_level end_levels to clear\n" +
+                                                                 "seperated by a space.")
+            self.wait_window(self.w.top)
+            self.altAction = 0
+            data = self.w.value.split()
+            try:
+                if len(data) == 2:
+                    st,sto = sorted((data[0],data[1]))
+                    st = int(st)
+                    sto = int(sto)
+                    for i in range(st,sto+1):
+                        if i < len(self.levels):
+                            self.levels[i] = dict()
+                            self.signs[i] = dict()
+                    self.redraw_level()
+                else:
+                    print 'Not enough arguments'
+            except ValueError:
+                print 'Error in values'
+        else:
+            if tkMessageBox.askquestion('Clear', "Clear Level: " + str(self.curr_level)) == 'yes':
+                self.levels[self.curr_level] = dict()
+                self.signs[self.curr_level] = dict()
+                self.redraw_level()
+            else:
+                pass
 
     def onDelete(self):
-        if tkMessageBox.askquestion('Delete', "Delete Level: " + str(self.curr_level)) == 'yes':
-            if len(self.levels) == 1:
-                self.onClear()
-            else:
-                self.levels.pop(self.curr_level)
-                self.signs.pop(self.curr_level)
-                self.currLevelCombo.config(values = range(len(self.levels)))
-                self.overlayLevelCombo.config(values = range(len(self.levels)))
+        if self.altAction == 1:
+            self.w=popupWindow(self,title = "Enter the arguments start_level end_levels to delete\n" +
+                                                                 "seperated by a space.")
+            self.wait_window(self.w.top)
+            self.altAction = 0
+            data = self.w.value.split()
+            try:
+                if len(data) == 2:
+                    st,sto = sorted((data[0],data[1]))
+                    st = int(st)
+                    sto = int(sto)
+                    for i in range(sto,st-1,-1):
+                        if i < len(self.levels) and i >=0 and len(self.levels)>1:
+                            self.levels.pop(i)
+                            self.signs.pop(i)
+                        elif i < len(self.levels) and i ==0 :
+                            self.levels[i] = dict()
+                            self.signs[i] = dict()
 
-                if self.overlayToggle == 1:
-                    self.toggle.invoke()
-                    self.overlayToggle = 0
-
-                if self.curr_level != 0:
-                    self.curr_level = self.curr_level - 1
-                    self.currLevelCombo.set(self.curr_level)
+                    self.currLevelCombo.config(values = range(len(self.levels)))
+                    self.overlayLevelCombo.config(values = range(len(self.levels)))
+                    self.curr_level = 0
+                    self.currLevelCombo.set(0)
+                    self.overlayLevelCombo.set(0)
+                    self.redraw_level()
                 else:
-                    self.currLevelCombo.set(self.curr_level)
-                self.redraw_level()
+                    print 'Not enough arguments'
+            except ValueError:
+                print 'Error in values'
+
+        else:
+            if tkMessageBox.askquestion('Delete', "Delete Level: " + str(self.curr_level)) == 'yes':
+                if len(self.levels) == 1:
+                    self.onClear()
+                else:
+                    self.levels.pop(self.curr_level)
+                    self.signs.pop(self.curr_level)
+                    self.currLevelCombo.config(values = range(len(self.levels)))
+                    self.overlayLevelCombo.config(values = range(len(self.levels)))
+
+                    if self.overlayToggle == 1:
+                        self.toggle.invoke()
+                        self.overlayToggle = 0
+
+                    if self.curr_level != 0:
+                        self.curr_level = self.curr_level - 1
+                        self.currLevelCombo.set(self.curr_level)
+                    else:
+                        self.currLevelCombo.set(self.curr_level)
+                    self.redraw_level()
 
     def addGeo(self):
         self.w=popupWindow(self,title = "Enter Command: help for Help")
@@ -518,11 +647,9 @@ class App(Frame):
                 if len(c) - 1 == 5:
                     result = builder.sphere(int(c[1]),int(c[2]),int(c[3]),int(c[4]),int(c[5]))
                     for i in result:
-                        print i
                         if i[1] < len(self.levels) and i[1] >=0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
 
             elif c[0] == 'pyramid':
                 if len(c) - 1 == 6:
@@ -531,7 +658,6 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
 
             elif c[0] == 'circle_x':
                 if len(c) - 1 == 5:
@@ -540,7 +666,6 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
             elif c[0] == 'circle_y':
                 if len(c) - 1 == 5:
                     result = builder.circle_y(int(c[1]),int(c[2]),int(c[3]),int(c[4]),int(c[5]))
@@ -548,7 +673,6 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
             elif c[0] == 'circle_z':
                 if len(c) - 1 == 5:
                     result = builder.circle_z(int(c[1]),int(c[2]),int(c[3]),int(c[4]),int(c[5]))
@@ -556,7 +680,6 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
             elif c[0] == 'cylinder_x':
                 if len(c) - 1 == 6:
                     x1,x2 = sorted([int(c[1]),int(c[2])])
@@ -565,7 +688,6 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
             elif c[0] == 'cylinder_y':
                 if len(c) - 1 == 6:
                     y1,y2 = sorted([int(c[2]),int(c[3])])
@@ -574,7 +696,6 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
             elif c[0] == 'cylinder_z':
                 if len(c) - 1 == 6:
                     z1,z2 = sorted([int(c[3]),int(c[4])])
@@ -583,7 +704,6 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
 
             elif c[0] == 'cuboid':
                 if len(c) - 1 == 7:
@@ -592,8 +712,20 @@ class App(Frame):
                         if i[1] < len(self.levels) and i[1] >= 0:
                             if i[0] < self.rows and i[0] >=0 and i[2] < self.cols and i[2] >=0:
                                 self.levels[i[1]][i[0],i[2]] = self.current_item
-                    self.redraw_level()
                 pass
+
+            newLevels = list()
+            for i, j in enumerate(self.levels):
+                temp = dict()
+                for key, val in j.iteritems():
+                    if int(val) != 0:
+                        temp[key] = val
+                newLevels.append(temp)
+
+            self.levels = newLevels
+
+            self.redraw_level()
+
         except RuntimeError:
             pass
 
@@ -701,15 +833,6 @@ class App(Frame):
         except ValueError:
             pass
 
-
-
-    def onCopy(self):
-        for col in range(self.cols):
-            for row in range(self.rows):
-                if (row,col) in self.levels[self.overlay_level]:
-                   self.levels[self.curr_level][row,col] = self.levels[self.overlay_level][row,col]
-        self.redraw_level()
-
     def onSave(self):
         filename = asksaveasfilename(parent=self)
         pickle.dump({'Dimensions' : [self.rows,self.cols,len(self.levels)],'Levels' : self.levels, 'Signs' : self.signs}, open(filename, 'wb'))
@@ -720,37 +843,33 @@ class App(Frame):
             self.overlayToggle = 0
 
         filename = askopenfilename(parent=self)
-        obj = pickle.load(open(filename, 'rb'))
-        self.updateDimensions(int(obj['Dimensions'][0]), int(obj['Dimensions'][1]), int(obj['Dimensions'][2]))
-        self.reset_canvas()
-        self.levels = obj['Levels']
+        try:
+            obj = pickle.load(open(filename, 'rb'))
+            self.updateDimensions(int(obj['Dimensions'][0]), int(obj['Dimensions'][1]), int(obj['Dimensions'][2]))
+            self.reset_canvas()
+            self.levels = obj['Levels']
 
-        if 'Signs' in obj:
-            self.signs = obj['Signs']
-        self.redraw_level()
-        self.currLevelCombo.config(values = range(len(self.levels)))
-        self.overlayLevelCombo.config(values = range(len(self.levels)))
+            if 'Signs' in obj:
+                self.signs = obj['Signs']
+            self.redraw_level()
+            self.currLevelCombo.config(values = range(len(self.levels)))
+            self.overlayLevelCombo.config(values = range(len(self.levels)))
+        except IOError:
+            pass
 
     def onToggle(self):
         if self.overlayToggle == 0:
             self.overlayToggle =1
-            self.redraw_overlay()
+            self.redraw_level()
         else:
             self.overlayToggle = 0
-            self.redraw_overlay()
+            self.redraw_level()
 
     def onNewLevel(self):
         self.add_new_level()
         self.currLevelCombo.config(values = range(len(self.levels)))
         self.overlayLevelCombo.config(values = range(len(self.levels)))
         self.redraw_level()
-
-    def onInsertLevel(self):
-        self.insert_new_level(self.curr_level)
-        self.currLevelCombo.config(values = range(len(self.levels)))
-        self.overlayLevelCombo.config(values = range(len(self.levels)))
-        self.redraw_level()
-
 
     def onRotate(self):
         self.rotatedData = list()
@@ -803,6 +922,7 @@ class App(Frame):
         temp = self.curr_level
         temp2 = self.overlay_level
         temp3 = self.overlayToggle
+        temp4 = self.current_item
 
         self.updateDimensions(self.rows, self.cols,len(self.newData))
         self.reset_canvas()
@@ -811,6 +931,8 @@ class App(Frame):
         self.curr_level = temp
         self.overlay_level = temp2
         self.overlayToggle = temp3
+
+        self.itemCombo.set(temp4)
         self.currLevelCombo.config(values = range(len(self.levels)))
         self.overlayLevelCombo.config(values = range(len(self.levels)))
         self.currLevelCombo.set(self.curr_level)
@@ -843,17 +965,27 @@ class App(Frame):
 
     def overlayLevelChooser(self, event):
         self.overlay_level = int(self.overlayLevelCombo.get())
-        self.redraw_overlay()
+        self.redraw_level()
 
     def itemChooser(self, event):
         self.current_item = int(self.itemCombo.get())
 
     def callbackLeftClick(self,event):
+        if self.current_item == 0:
+            return
         col = int(math.floor((event.x)/self.cellwidth))
         row = int(math.floor((event.y)/self.cellheight))
+        x1 = col * self.cellwidth
+        y1 = row * self.cellheight
+        x2 = x1 + self.cellwidth
+        y2 = y1 + self.cellheight
+
         if (self.rows - row - 1,col) in self.rect:
             self.canvas.itemconfig(self.rect[self.rows - row - 1,col],fill=COLORS[self.current_item])
             self.canvas.itemconfig(self.rect_text[self.rows - row - 1,col], text = str(self.current_item))
+        else:
+            self.rect[self.rows - row - 1,col] = self.canvas.create_rectangle(x1,y1,x2,y2, fill=COLORS[self.current_item], outline = 'black', width = DEFAULTWIDTH, tag = 'block')
+            self.rect_text[self.rows - row - 1,col] = self.canvas.create_text((x1+x2)/2,(y1+y2)/2, text = self.current_item, font=('verdana', 7), tag = 'blocktext')
 
         self.levels[self.curr_level][self.rows - row - 1,col] = self.current_item
 
@@ -863,9 +995,12 @@ class App(Frame):
     def callbackRightClick(self,event):
         col = int(math.floor((event.x)/self.cellwidth))
         row = int(math.floor((event.y)/self.cellheight))
+
         if (self.rows - row - 1,col) in self.rect:
-            self.canvas.itemconfig(self.rect[self.rows - row - 1,col],fill="white")
-            self.canvas.itemconfig(self.rect_text[self.rows - row - 1,col], text = '')
+            self.canvas.delete(self.rect[self.rows - row - 1,col])
+            self.canvas.delete(self.rect_text[self.rows - row - 1,col])
+            self.rect.pop((self.rows - row -1, col))
+            self.rect_text.pop((self.rows - row -1, col))
 
         self.levels[self.curr_level].pop((self.rows - row - 1,col),None)
 

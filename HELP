@@ -2,21 +2,28 @@ HELP FOR BUTTONS
 1. New - Creates a new map. Enter dimensions in the form XxZxY or XxZ 
 	(e.g 10x20x2 - will create a grid of 10 rows and 20 columns with 2 levels)
 	(e.g. 10x20 - will create a grid of 10 rows and 20 columns with 1 level)
-2. Save - Opens a file dialog to choose file name. Saves a pickle of the data model
-3. Load - Opens a file dialog to choose file name. Loads a previously saved data model
-3. Connect - Connects to sever using details entered in the craftBuilder.py file
-4. Disconnect - Disconnects from server
-5. Clear Level - Removes all blocks from the current level
-6. Delete Level - Deletes the current level
-7. Insert Level - Inserts a level below the current level
-8. Combo box (Curr. Level/Overlay Level) - Selects Current level visible and the overlay level to be shown
-9. Copy overlay Level - Copies the blocks from the overlay level to the current level
-10. New Level - Adds a level to the top of current levels
-11. Rotate - Rotates the model 90 degrees anti-clockwise
-12. Overlay toggle - toggles whether an overlay of another level is visible or not. The overlay is represented by thicker grid boxes
-13. Item combo box - Selects the block kind (1-63)
-14. Load from world - Loads the block representation from the world. Specify the bottom left block and the top right block of the imaginary cube that contains the area you want copied to the model
-15. Paste in world - Pastes the current model on the world given a set of world x,y,z co-ordinates which acts as the origin point (0,0,0) of the model. All model points will be pasted related to that point
-16. Paste Signs - Pastes the signs if the model you are using contains signs. They will be rotated when the model is rotated.
-17. Add Geometry - This option is available if builder.py is in the directory. You can add geometric shapes to your model using this option
+2. For all option entry in text other than the above, all arguments should be separated by a space
+3. Save - Opens a file dialog to choose file name. Saves a pickle of the data model
+4. Load - Opens a file dialog to choose file name. Loads a previously saved data model
+5. Connect - Connects to sever using details entered in the craftBuilder.py file
+6. Disconnect - Disconnects from server
+7. Clear Level - Removes all blocks from the current level
+8. Delete Level - Deletes the current level
+9. Insert Level - Inserts a level below the current level
+10. Combo box (Curr. Level/Overlay Level) - Selects Current level visible and the overlay level to be shown
+11. Copy overlay Level - Copies the blocks from the overlay level to the current level
+12. New Level - Adds a level to the top of current levels
+13. Rotate - Rotates the model 90 degrees anti-clockwise
+14. Overlay toggle - toggles whether an overlay of another level is visible or not. The overlay is represented by thicker grid boxes
+15. Item combo box - Selects the block kind (1-63)
+16. Load from world - Loads the block representation from the world. Specify the bottom left block and the top right block of the imaginary cube that contains the area you want copied to the model
+17. Paste in world - Pastes the current model on the world given a set of world x,y,z co-ordinates which acts as the origin point (0,0,0) of the model. All model points will be pasted related to that point
+18. Paste Signs - Pastes the signs if the model you are using contains signs. They will be rotated when the model is rotated.
+19. Add Geometry - This option is available if builder.py is in the database directory provided. You can add geometric shapes to your model using this option
+20. Left click adds a block of selected item. Right click removes a block. Scroll wheel moves between levels
+
+
+Co-ordinate system:
+Bottom left of blank canvas is x,z co-ord (0,0) and top right is (max(x), max(z)). X increases from bottom to top, Z increases from left to right.
+For pasting model into world, ensure the origin point for paste is in the same co-ordinate system. i.e you are facing the direction where x increases in front of you and z increases to your right
 
